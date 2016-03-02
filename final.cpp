@@ -64,7 +64,7 @@ int main(int argc, char* argv[])
     }
 
 
-    daemon(1, 1);
+    daemon(0, 0);
     http::server3::server s(host, port, dir, num_threads);    
     s.run();
   }
