@@ -7,58 +7,71 @@
 #include <unistd.h>
 #include <syslog.h>
 #include <string.h>
+#include <ctype.h>
+#include <boost/asio.hpp>
+#include <iostream>
+#include <string>
+#include <boost/asio.hpp>
+#include <boost/bind.hpp>
+#include <boost/lexical_cast.hpp>
+#include "server3/server.hpp"
+
+using boost::asio::ip::tcp;
 
 using namespace std;
 
-#define DAEMON_NAME "vdaemon"
 
-void process(){
+int main(int argc, char* argv[])
+{
+  try
+  {
+    int index;
+    int c;
 
-    syslog (LOG_NOTICE, "Writing to my Syslog");
-}   
+    char* host = "127.0.0.1";
+    char* port = "80";
+    char* dir  = "/home/box";
 
-int main(int argc, char *argv[]) {
+    std::size_t num_threads = 4;
 
-    //Set our Logging Mask and open the Log
-    setlogmask(LOG_UPTO(LOG_NOTICE));
-    openlog(DAEMON_NAME, LOG_CONS | LOG_NDELAY | LOG_PERROR | LOG_PID, LOG_USER);
+    opterr = 0;
 
-    syslog(LOG_INFO, "Entering Daemon");
-
-    pid_t pid, sid;
-
-   //Fork the Parent Process
-    pid = fork();
-
-    if (pid < 0) { exit(EXIT_FAILURE); }
-
-    //We got a good pid, Close the Parent Process
-    if (pid > 0) { exit(EXIT_SUCCESS); }
-
-    //Change File Mask
-    umask(0);
-
-    //Create a new Signature Id for our child
-    sid = setsid();
-    if (sid < 0) { exit(EXIT_FAILURE); }
-
-    //Change Directory
-    //If we cant find the directory we exit with failure.
-    if ((chdir("/")) < 0) { exit(EXIT_FAILURE); }
-
-    //Close Standard File Descriptors
-    close(STDIN_FILENO);
-    close(STDOUT_FILENO);
-    close(STDERR_FILENO);
-
-    //----------------
-    //Main Process
-    //----------------
-    while(true){
-        process();    //Run our Process
-        sleep(60);    //Sleep for 60 seconds
+    while ((c = getopt (argc, argv, "h:p:d:")) != -1) {
+        switch (c)
+          {
+          case 'h':
+            host = optarg;
+            break;
+          case 'p':
+            port = optarg;
+            break;
+          case 'd':
+            dir = optarg;
+            break;
+          case '?':
+            if (optopt == 'c')
+              fprintf (stderr, "Option -%c requires an argument.\n", optopt);
+            else if (isprint (optopt))
+              fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+            else
+              fprintf (stderr,
+                       "Unknown option character `\\x%x'.\n",
+                       optopt);
+            return 1;
+          default:
+            abort ();
+          }
     }
 
-    //Close the log
-    closelog ();
+
+    daemon(1, 1);
+    http::server3::server s(host, port, dir, num_threads);    
+    s.run();
+  }
+  catch (std::exception& e)
+  {
+    std::cerr << "Exception: " << e.what() << "\n";
+  }
+
+  return 0;
 }
