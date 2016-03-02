@@ -110,6 +110,10 @@ bool request_handler::url_decode(const std::string& in, std::string& out)
     {
       out += ' ';
     }
+    else if (in[i] == '?')
+    {
+      return true;
+    }
     else
     {
       out += in[i];
